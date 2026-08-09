@@ -288,3 +288,7 @@ Special thanks to:
   ⭐ Star this repo if you enjoyed it! ⭐
 
 </div>
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
