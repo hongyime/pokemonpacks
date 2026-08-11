@@ -1,5 +1,9 @@
 # 🎴 Pokémon Pack Opener
 
+
+![Project screenshot](./screenshot.png)
+
+
 <div align="center">
   
   ![Pokémon Pack Opener](https://img.shields.io/badge/Pokémon-Pack_Opener-FF0000?style=for-the-badge&logo=pokemon&logoColor=white)
