@@ -26,9 +26,24 @@ dist-ssr
 # Environment variables
 .env
 
+templates/
+.env.*
+node_modules/
+dist/
+build/
+.next/
+__pycache__/
+.pytest_cache/
+
 # AI / editor dot directories (managed via sourcerepo)
 .*
 !.github/
+!.agents/
+.agents/*
+!.agents/STATE.md
+!.agents/JOURNAL.md
+!.agents/handoffs/
+!.agents/handoffs/**
 !.gitignore
 !.gitattributes
 !.gitmodules
@@ -54,11 +69,4 @@ dist-ssr
 skills/
 skills-lock.json
 docs/
-templates/
-.env.*
-node_modules/
-dist/
-build/
-.next/
-__pycache__/
-.pytest_cache/
+# End AI / editor dot directories (managed via sourcerepo)
