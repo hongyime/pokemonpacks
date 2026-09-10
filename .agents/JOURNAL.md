@@ -1,0 +1,5 @@
+# Decision journal
+
+- 2026-09-11: Quota recovery currently evicts unrelated storage entries and switches to an empty memory store. Replace eviction with per-key volatile updates while preserving readable durable data; notify users when new changes cannot survive reload.
+- 2026-09-11: Twelve synthetic storage regressions pass after preserving durable entries. Bun frozen install and an intermediate Vite/PWA build pass; chart/resizable type errors and final browser/export validation remain unresolved. No release yet; credential source removal is not provider revocation.
+- 2026-09-11: JSON export preserves full favorites including pending values and filtered cards; confirmed removal uses the active backend and preserves the current pack. Repaired the existing library wrappers and misleading connection-check flow. The synthetic stalled request timed out in about 21 seconds and leaving aborted it. Moved the temporary-save warning into page flow after observing toast overlap; final layout verification and release remain pending.

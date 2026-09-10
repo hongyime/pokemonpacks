@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { CardData, PokemonTCGCard } from '@/types/pokemon';
 import { PokemonCard } from './PokemonCard';
 import { Button } from './ui/button';
-import { Heart, Trash, Loader2, Search, Filter } from 'lucide-react';
+import { Heart, Trash, Loader2, Search, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { toast } from 'sonner';
 import { Input } from './ui/input';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 interface DashboardProps {
   favorites: CardData[];
   onRemoveFavorite: (cardId: string) => void;
+  onClearFavorites: () => void;
   onBackToHome: () => void;
 }
 
@@ -22,12 +23,13 @@ type MaybeSessionCard = CardData & {
 // Cache for card details to avoid repeated API calls
 const cardDetailsCache: Record<string, PokemonTCGCard> = {};
 
-export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: DashboardProps) => {
+export const Dashboard = ({ favorites, onRemoveFavorite, onClearFavorites, onBackToHome }: DashboardProps) => {
   const [selected, setSelected] = useState<CardData | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [selectedDetails, setSelectedDetails] = useState<PokemonTCGCard | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [setFilter, setSetFilter] = useState<string>('all');
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Filter and search logic
   const filteredFavorites = useMemo(() => {
@@ -75,7 +77,7 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
     try {
       // Fetch card details from API
       const API_BASE = 'https://api.pokemontcg.io/v2';
-      const response = await fetch(`${API_BASE}/cards/${cardId}`);
+      const response = await fetch(`${API_BASE}/cards/${encodeURIComponent(cardId)}`, { signal: AbortSignal.timeout(20000) });
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
@@ -99,17 +101,25 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
   }, []);
 
 
-  const handleClearSession = () => {
+  const handleExport = () => {
+    let url: string | undefined;
     try {
-      window.sessionStorage.removeItem('currentPack');
-      window.sessionStorage.removeItem('favorites');
-      // also remove any other keys that start with 'pack' or 'fav'
-      // (careful: keep it minimal to avoid removing unrelated keys)
-    } catch (e) {
-      console.error(e);
+      // Export the complete current collection, including pending memory changes.
+      // JSON retains every field and image value; filters do not limit the backup.
+      const blob = new Blob([JSON.stringify({ format: 'pokemonpacks-favorites', version: 1, favorites }, null, 2) + '\n'], { type: 'application/json' });
+      url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'pokemonpacks-favorites.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      toast.error('Could not download your favorites. Keep this tab open and try again.');
+    } finally {
+      // Let the browser start reading the Blob before releasing its URL.
+      if (url) setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
-    // reload to reflect cleared session
-    window.location.reload();
   };
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
@@ -125,6 +135,7 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Search cards by name or set..."
+                  aria-label="Search favorites"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -136,7 +147,7 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
                 {/* Set Filter */}
                 <div className="flex w-full sm:w-1/2 lg:w-[160px]">
                   <Select value={setFilter} onValueChange={setSetFilter}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full" aria-label="Filter favorites by set">
                       <SelectValue placeholder="Set" />
                     </SelectTrigger>
                     <SelectContent>
@@ -151,12 +162,16 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
                 </div>
         
                 {/* Remove All Button */}
-                <div className="flex w-full sm:w-1/2 lg:w-auto justify-end">
+                <div className="flex w-full sm:w-auto lg:w-auto justify-end gap-2">
+                  <Button onClick={handleExport} variant="outline" size="sm" className="gap-1 flex-1 sm:flex-none">
+                    <Download className="w-3 h-3" />
+                    Export favorites
+                  </Button>
                   <Button
-                    onClick={handleClearSession}
+                    onClick={() => setConfirmClear(true)}
                     variant="destructive"
                     size="sm"
-                    className="flex items-center justify-center gap-1 text-xs w-full sm:w-full lg:w-auto"
+                    className="flex items-center justify-center gap-1 text-xs flex-1 sm:flex-none"
                   >
                     <Trash className="w-3 h-3" />
                     Remove All
@@ -233,6 +248,19 @@ export const Dashboard = ({ favorites, onRemoveFavorite, onBackToHome }: Dashboa
         )}
         </div>
       </div>
+
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove all favorites?</DialogTitle>
+            <DialogDescription>Remove all {favorites.length} favorites from this collection. Export a backup first if you want to keep them. Your current pack stays available.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => { onClearFavorites(); setConfirmClear(false); }}>Remove all favorites</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal for selected card (controlled) */}
       <Dialog open={!!selected} onOpenChange={(open) => { 

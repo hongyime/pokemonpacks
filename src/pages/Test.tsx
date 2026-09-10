@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { testApiKey } from '@/services/pokemonTcgApi';
+import { testApiConnection } from '@/services/pokemonTcgApi';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,22 +8,27 @@ import { useNavigate } from 'react-router-dom';
 const Test = () => {
   const [isTestingApi, setIsTestingApi] = useState(false);
   const navigate = useNavigate();
+  const controller = useRef<AbortController | null>(null);
+  useEffect(() => () => controller.current?.abort(), []);
 
   const handleTestApi = async () => {
     if (isTestingApi) return;
     setIsTestingApi(true);
-    toast.info('Testing API key...');
+    const request = new AbortController();
+    controller.current = request;
+    toast.info('Checking the card service...');
     try {
-      const success = await testApiKey();
+      const success = await testApiConnection(request.signal);
+      if (request.signal.aborted) return;
       if (success) {
-        toast.success('API key is working correctly!');
+        toast.success('Card service is available.');
       } else {
-        toast.error('API key test failed. Please check your configuration.');
+        toast.error('Card service is unavailable or rate limited. Please try again later.');
       }
-    } catch (error) {
-      toast.error('API key test failed. Please check your configuration.');
+    } catch {
+      if (!request.signal.aborted) toast.error('Could not check the card service. Please try again later.');
     } finally {
-      setIsTestingApi(false);
+      if (!request.signal.aborted) setIsTestingApi(false);
     }
   };
 
@@ -46,7 +51,7 @@ const Test = () => {
               API Testing
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Test your Pokémon TCG API connection and refresh data
+              Check the Pokémon TCG card service
             </p>
           </div>
 
@@ -56,8 +61,8 @@ const Test = () => {
               API Connection Test
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              This will test your API key connection and refresh the card data cache.
-              The process may take a few minutes to complete.
+              Make one public connection check, with a maximum wait of 20 seconds.
+              Your saved cards and bundled catalogs stay intact.
             </p>
             
             <Button
@@ -66,7 +71,7 @@ const Test = () => {
               className="w-full"
               size="lg"
             >
-              {isTestingApi ? 'Testing API...' : 'Test API Key & Refresh Data'}
+              {isTestingApi ? 'Checking connection...' : 'Check connection'}
             </Button>
             
             {isTestingApi && (
@@ -85,10 +90,9 @@ const Test = () => {
               What this does:
             </h3>
             <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-              <li>• Tests your API key connection to the Pokémon TCG API</li>
-              <li>• Fetches the latest set information from the API</li>
-              <li>• Updates the local card database with new/updated sets</li>
-              <li>• Refreshes the card cache for better performance</li>
+              <li>• Requests one set from the public card service</li>
+              <li>• Reports availability or an error without changing your collection</li>
+              <li>• Cancels the check if you leave this page</li>
             </ul>
           </div>
         </div>

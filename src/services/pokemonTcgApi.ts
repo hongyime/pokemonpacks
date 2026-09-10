@@ -1,17 +1,11 @@
 import axios, { AxiosError } from 'axios';
 import { PokemonTCGCard, CardData } from '@/types/pokemon';
+import { universalStorage } from '@/lib/storageManager';
 
 const API_BASE = 'https://api.pokemontcg.io/v2';
-// CORS proxy for development - remove in production and use backend API
-const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
-const USE_CORS_PROXY = true; // Enable CORS proxy for testing
-
-const API_TIMEOUT = 400000; // 400 seconds (6.67 minutes) timeout - more than double the observed 139.2s response time
-
-// Development warning for CORS proxy usage
-if (USE_CORS_PROXY) {
-  console.warn('⚠️ Using CORS proxy for development. This should be disabled in production and replaced with a backend API.');
-}
+// Public browser requests use the provider's anonymous API. Never embed an API
+// credential or route it through a third-party CORS proxy.
+const API_TIMEOUT = 20000;
 
 // Cache keys
 const CACHE_KEYS = {
@@ -20,13 +14,13 @@ const CACHE_KEYS = {
   CACHE_TIMESTAMP: 'pokemon_cache_timestamp',
 };
 
-// Cache duration (24 hours in milliseconds)
+// Cache duration (48 hours in milliseconds)
 const CACHE_DURATION = 48 * 60 * 60 * 1000;
 
 // Cache management functions
 const getCache = (key: string) => {
   try {
-    const item = sessionStorage.getItem(key);
+    const item = universalStorage.getItem(key);
     return item ? JSON.parse(item) : null;
   } catch {
     return null;
@@ -35,7 +29,7 @@ const getCache = (key: string) => {
 
 const setCache = (key: string, data: unknown) => {
   try {
-    sessionStorage.setItem(key, JSON.stringify(data));
+    universalStorage.setItem(key, JSON.stringify(data));
   } catch {
     // Ignore storage errors
   }
@@ -48,17 +42,17 @@ const isCacheValid = (timestamp: number) => {
 const clearExpiredCache = () => {
   const timestamp = getCache(CACHE_KEYS.CACHE_TIMESTAMP);
   if (!timestamp || !isCacheValid(timestamp)) {
-    sessionStorage.removeItem(CACHE_KEYS.SETS);
-    sessionStorage.removeItem(CACHE_KEYS.CARDS);
-    sessionStorage.removeItem(CACHE_KEYS.CACHE_TIMESTAMP);
+    universalStorage.removeItem(CACHE_KEYS.SETS);
+    universalStorage.removeItem(CACHE_KEYS.CARDS);
+    universalStorage.removeItem(CACHE_KEYS.CACHE_TIMESTAMP);
   }
 };
 
 // Manual cache clearing function (exported for potential use)
 export const clearCache = () => {
-  sessionStorage.removeItem(CACHE_KEYS.SETS);
-  sessionStorage.removeItem(CACHE_KEYS.CARDS);
-  sessionStorage.removeItem(CACHE_KEYS.CACHE_TIMESTAMP);
+  universalStorage.removeItem(CACHE_KEYS.SETS);
+  universalStorage.removeItem(CACHE_KEYS.CARDS);
+  universalStorage.removeItem(CACHE_KEYS.CACHE_TIMESTAMP);
 };
 
 // Custom error types for better error handling
@@ -73,79 +67,26 @@ export class PokemonTCGError extends Error {
   }
 }
 
-// Get API key from window if available
-const getHeaders = () => {
-  // API key is a publishable key and safe to store in code
-  const apiKey = '4c234358-ff65-4a99-9d97-84bf974ebd2b';
-  return apiKey ? { 'X-Api-Key': apiKey } : {};
-};
-
-// Get headers without API key (for fallback)
-const getHeadersWithoutApiKey = () => ({});
-
-// Helper function to make API requests with fallback
+// One direct anonymous request, bounded to 20 seconds and cancellable by callers.
 const makeApiRequest = async (config: {
   url: string;
   method?: string;
   headers?: Record<string, string>;
   params?: Record<string, string | number | boolean>;
   timeout?: number;
-}, signal?: AbortSignal): Promise<import('axios').AxiosResponse> => {
-  console.log(`🌐 Making API request to: ${config.url}`);
-  const startTime = Date.now();
+}, signal?: AbortSignal): Promise<import('axios').AxiosResponse> => axios({
+  ...config,
+  timeout: Math.min(config.timeout ?? API_TIMEOUT, API_TIMEOUT),
+  signal,
+});
 
-  // Apply CORS proxy if enabled
-  const finalUrl = USE_CORS_PROXY ? `${CORS_PROXY}${config.url}` : config.url;
-
-  // First try with API key
-  try {
-    const response = await axios({
-      ...config,
-      url: finalUrl,
-      headers: { ...config.headers, ...getHeaders() },
-      timeout: API_TIMEOUT,
-      signal, // Add abort signal
-    });
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`✅ API request completed in ${duration}s (with API key)`);
-    return response;
-  } catch (error) {
-    // If it's an authentication error (401/403), try again without API key
-    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
-      console.log('🔑 API key failed, trying without API key...');
-      try {
-        const response = await axios({
-          ...config,
-          url: finalUrl,
-          headers: { ...config.headers, ...getHeadersWithoutApiKey() },
-          timeout: API_TIMEOUT,
-          signal, // Add abort signal
-        });
-        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`✅ API request completed in ${duration}s (fallback without API key)`);
-        return response;
-      } catch (fallbackError) {
-        // If fallback also fails, throw the original error
-        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.error(`❌ API request failed after ${duration}s:`, fallbackError);
-        throw error;
-      }
-    }
-    // If it's not an auth error, throw the original error
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.error(`❌ API request failed after ${duration}s:`, error);
-    throw error;
-  }
-};
-
-// Helper function to handle axios errors and convert to custom errors
 const handleApiError = (error: unknown, operation: string): never => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError;
 
     if (axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')) {
       throw new PokemonTCGError(
-        'Request timed out after waiting 7 minutes. The Pokémon TCG API may be experiencing delays.',
+        'The card service did not respond within 20 seconds. Please try again later.',
         'TIMEOUT',
         axiosError
       );
@@ -421,56 +362,16 @@ export const getRandomPack = async (signal?: AbortSignal): Promise<CardData[]> =
 
 export const openPack = getRandomPack;
 
-/**
- * Test API key and refresh sets cache and CSV files
- * Called when "Test API" button is clicked
- * 
- * This function will:
- * 1. Call API to refresh sets_cache.json
- * 2. Update downloaded_sets.csv with new/updated sets
- * 3. Update downloaded_cards.csv with all card entries
- * 4. Display progress to user
- * 5. NOT download any images (that happens on page load)
- */
-export const testApiKey = async (signal?: AbortSignal): Promise<boolean> => {
-  // Import CSV manager dynamically to avoid circular dependencies
-  const { refreshCSVData } = await import('./csvManager');
-  
+/** One anonymous availability check. A browser cannot rewrite bundled CSV files. */
+export const testApiConnection = async (signal?: AbortSignal): Promise<boolean> => {
   try {
-    console.log('🔄 Starting API test and data refresh...');
-    const startTime = Date.now();
-    
-    // Step 1: Fetch all sets from the API
-    console.log('📡 Fetching sets from API...');
     const response = await makeApiRequest({
       url: `${API_BASE}/sets`,
       method: 'GET',
+      params: { pageSize: 1 },
     }, signal);
-    
-    const sets = response.data.data || [];
-    if (sets.length === 0) {
-      throw new PokemonTCGError('No sets available from API', 'NO_DATA');
-    }
-    
-    // Step 2: Save to sets_cache.json
-    console.log(`💾 Saving ${sets.length} sets to cache...`);
-    // In a real app, we would call a backend API to save the file
-    // For this example, we assume the cache is saved automatically
-    
-    // Step 3: Update CSV files through the CSV manager
-    console.log('📊 Updating CSV files...');
-    const csvUpdateResult = await refreshCSVData();
-    
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`✅ API test and data refresh completed in ${duration}s`);
-    
-    return csvUpdateResult;
-  } catch (error) {
-    const errorMessage = error instanceof PokemonTCGError 
-      ? error.message 
-      : 'Failed to connect to Pokémon TCG API';
-    
-    console.error('❌ API test failed:', error);
+    return Array.isArray(response.data?.data) && response.data.data.length > 0;
+  } catch {
     return false;
   }
 };

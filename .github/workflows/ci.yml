@@ -4,6 +4,18 @@ name: Build Check
 # - concurrency: cancel-in-progress so a new commit cancels the previous PR build.
 # - Existing paths filter kept (already skips markdown-only edits).
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'public/**'
+      - 'package.json'
+      - 'bun.lockb'
+      - '*.config.*'
+      - 'tsconfig*.json'
+      - 'index.html'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main, master]
     paths:
@@ -23,17 +35,23 @@ on:
       - "tailwind.config.*"
       - "vite.config.*"
       - "tsconfig*.json"
+      - "tests/**"
+      - "public/**"
+      - "index.html"
+      - ".github/workflows/ci.yml"
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -63,8 +81,8 @@ jobs:
         if: steps.detect.outputs.has_build == 'true'
         uses: actions/setup-node@v7
         with:
-          node-version: "lts/*"
-          cache: ${{ steps.detect.outputs.pm }}
+          node-version: "24"
+          cache: ${{ steps.detect.outputs.pm != 'bun' && steps.detect.outputs.pm || '' }}
 
       - name: Install dependencies (npm)
         if: steps.detect.outputs.has_build == 'true' && steps.detect.outputs.pm == 'npm'
@@ -82,11 +100,41 @@ jobs:
         if: steps.detect.outputs.has_build == 'true' && steps.detect.outputs.pm == 'bun'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.3.11'
+
+      - name: Install frozen Bun dependencies
+        if: steps.detect.outputs.has_build == 'true' && steps.detect.outputs.pm == 'bun'
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Storage regressions
+        run: node --test tests/*.test.mjs
 
       - name: Run build
         if: steps.detect.outputs.has_build == 'true'
         run: ${{ steps.detect.outputs.pm == 'npm' && 'npm run build' || format('{0} run build', steps.detect.outputs.pm) }}
+
+      - name: Set up browser verification
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install browser test tools
+        run: |
+          python -m pip install playwright==1.60.0
+          python -m playwright install --with-deps chromium
+
+      - name: Verify storage and API flows without external providers
+        run: python tests/browser.py
+
+      - name: Preserve reviewed build and browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pokemon-packs-build
+          path: |
+            dist/
+            browser-results/
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Build succeeded
         if: steps.detect.outputs.has_build == 'true'

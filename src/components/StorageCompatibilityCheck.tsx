@@ -1,79 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { universalStorage } from '@/lib/storageManager';
 
-/**
- * Component to check and display storage compatibility status
- */
+/** Report volatile changes immediately, without polling or discarding saved cards. */
 export const StorageCompatibilityCheck = () => {
-  const [storageInfo, setStorageInfo] = useState<{
-    type: string;
-    available: boolean;
-    warning: boolean;
-  } | null>(null);
+  const [temporary, setTemporary] = useState(() => universalStorage.getStorageType() === 'memory');
+  const [lowSpace, setLowSpace] = useState(false);
 
   useEffect(() => {
-    const checkStorage = async () => {
-      const type = universalStorage.getStorageType();
-      const available = universalStorage.isAvailable();
-      
-      // Check if storage is critically low
-      const estimate = await universalStorage.estimateSpace();
-      let warning = false;
-      
-      if (estimate) {
-        const usagePercent = (estimate.usage / estimate.quota) * 100;
-        warning = usagePercent > 80;
-      }
-
-      setStorageInfo({
-        type: type === 'session' ? 'Session Storage' : 
-              type === 'local' ? 'Local Storage' : 
-              'In-Memory (temporary)',
-        available,
-        warning
-      });
-
-      // Log storage info for debugging
-      console.log('[StorageCheck]', {
-        type,
-        available,
-        warning,
-        estimate
-      });
-    };
-
-    checkStorage();
+    let active = true;
+    const update = () => setTemporary(universalStorage.getStorageType() === 'memory');
+    const unsubscribe = universalStorage.subscribe(update);
+    update();
+    void universalStorage.estimateSpace().then(estimate => {
+      if (active && estimate) setLowSpace(estimate.usage / estimate.quota > 0.8);
+    });
+    return () => { active = false; unsubscribe(); };
   }, []);
 
-  // Only show alert if there's an issue
-  if (!storageInfo || (storageInfo.available && !storageInfo.warning)) {
-    return null;
-  }
+  if (!temporary && !lowSpace) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 max-w-md z-50">
-      <Alert variant={storageInfo.warning ? "default" : "destructive"}>
-        {storageInfo.available ? (
-          <CheckCircle2 className="h-4 w-4" />
-        ) : (
-          <AlertCircle className="h-4 w-4" />
-        )}
-        <AlertTitle>
-          {storageInfo.warning ? 'Storage Warning' : 'Limited Storage'}
-        </AlertTitle>
+    <div className="shrink-0 px-4 py-2">
+      <Alert role="status" aria-live="polite" className="mx-auto max-w-4xl">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>{temporary ? 'Changes are temporary' : 'Storage is running low'}</AlertTitle>
         <AlertDescription>
-          {storageInfo.warning ? (
-            <>
-              Your device storage is running low. Using {storageInfo.type}. 
-              Some features may be limited.
-            </>
-          ) : (
-            <>
-              Using {storageInfo.type}. Card images will not persist between sessions.
-            </>
-          )}
+          {temporary
+            ? 'Your saved records are kept. New changes are available in this tab but may be lost when you reload. Export your favorites before leaving.'
+            : 'Browser storage space is running low. Export your favorites to keep a copy before clearing any storage.'}
         </AlertDescription>
       </Alert>
     </div>

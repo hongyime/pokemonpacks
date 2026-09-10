@@ -5,7 +5,7 @@
 
 
 <div align="center">
-  
+
   ![Pokémon Pack Opener](https://img.shields.io/badge/Pokémon-Pack_Opener-FF0000?style=for-the-badge&logo=pokemon&logoColor=white)
   ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)
   ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -31,7 +31,7 @@
 - **Favorites System**: Swipe left to add cards to your personal collection
 - **Collection Dashboard**: View all your favorited cards in a beautiful grid layout
 - **Card Details**: Click any card to see detailed information
-- **Export Functionality**: Download your collection as CSV
+- **Export Functionality**: Download all favorites as a JSON backup, including card and image fields
 - **Session Management**: Clear your session and start fresh
 
 ### 🎨 User Experience
@@ -90,7 +90,7 @@ The app will be available at `http://localhost:5173`
 ### Managing Your Collection
 - **View Collection**: Click "Collection" in the navigation bar
 - **Card Details**: Click any card to see full information
-- **Export CSV**: Download your collection data
+- **Export favorites**: Download the complete collection as JSON, including cards hidden by search filters
 - **Clear Session**: Remove all favorites and start over
 
 ---
@@ -286,9 +286,9 @@ Special thanks to:
 ---
 
 <div align="center">
-  
+
   **Built with ❤️ using Lovable**
-  
+
   ⭐ Star this repo if you enjoyed it! ⭐
 
 </div>
@@ -296,3 +296,45 @@ Special thanks to:
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## Browser storage and API maintenance
+
+The app keeps its existing sessionStorage/localStorage data and bundled catalogs.
+When a write cannot persist, its new value remains available in memory for the
+current page. Existing favorites, packs and unrelated entries are not evicted to
+make room. A visible warning asks users to export favorites before reloading when
+changes are temporary. Freeing space allows later writes to persist again.
+
+In Faves, **Export favorites** downloads `pokemonpacks-favorites.json` with all
+current favorites, including temporary changes and cards hidden by filters. The
+file retains full card objects; there is no automatic cloud upload or in-app
+import yet. **Remove All** asks for confirmation, changes only favorites through
+the active storage backend, and leaves the current pack available without a reload.
+
+The browser calls the Pokémon TCG API directly without an embedded credential or
+development proxy. Each request has a 20-second timeout and accepts cancellation.
+Anonymous requests have lower provider limits; the existing caches still apply.
+The connection-check page makes one anonymous set request, cancels when you leave,
+and reports availability without pretending to rewrite bundled CSV/JSON files.
+Previously published credentials need retirement in the provider account; removing
+them from current source does not revoke them or erase Git history.
+
+The provider currently marks this API deprecated and says existing keys continue
+through March 1, 2027. No paid replacement service has been enabled. See the
+[authentication guidance](https://docs.pokemontcg.io/getting-started/authentication/)
+and [rate limits](https://docs.pokemontcg.io/getting-started/rate-limits/).
+
+Run the isolated storage regressions with `node --test tests/storage.test.mjs`
+using Node 24 or later. Tests use synthetic in-memory storage and make no network
+requests or changes to real browser collections. Storage repair does not establish
+monthly Supabase or Vercel savings.
+
+`bun install --frozen-lockfile --ignore-scripts` installs the existing lockfile;
+`bun run build` checks both TypeScript projects before building. CI runs Node 24
+storage tests and the same build, then `tests/browser.py` with Playwright 1.60.0.
+The browser checks use disposable synthetic favorites and intercept provider
+requests. They cover quota preservation, local fallback, backup contents, explicit
+removal, reload/recovery and anonymous connection success/rate-limit/timeout flows.
+To run locally, install that Playwright version and Chromium, then run
+`python tests/browser.py` after building. The script owns and closes its temporary
+local server. No real provider requests or user collections are used by the checks.

@@ -655,6 +655,7 @@ const Index = () => {
               <Dashboard
                 favorites={favorites}
                 onRemoveFavorite={handleRemoveFavorite}
+                onClearFavorites={() => setFavorites([])}
                 onBackToHome={() => setView('home')}
               />
             </Suspense>
