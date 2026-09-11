@@ -15,6 +15,7 @@ on:
       - '*.config.*'
       - 'tsconfig*.json'
       - 'index.html'
+      - 'vercel.json'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main, master]
@@ -38,6 +39,7 @@ on:
       - "tests/**"
       - "public/**"
       - "index.html"
+      - "vercel.json"
       - ".github/workflows/ci.yml"
 
 concurrency:

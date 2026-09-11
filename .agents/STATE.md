@@ -1,37 +1,30 @@
 # Agent state
 
-Portfolio upkeep, 2026-09-11. Start from deployed/main 9d6db42; preserve the
-original checkout's ignore-file edit and all bundled card data.
+Portfolio upkeep, 2026-09-11. PR #60 is merged: implementation 5baf654,
+application merge 88bce44. Incoming workflow-only update 3f8cc46 is preserved.
 
-- [x] Trace quota handling, fallback reads and the storage warning UI.
-- [x] Reproduce the storage failures using synthetic records: baseline 2 pass / 10 fail.
-- [x] Implement per-key volatile updates without eviction; all 12 storage tests pass.
-- [x] Remove the embedded credential from proposed client source without using it.
-- [x] Repair chart/resizable wrappers for the installed APIs; both TypeScript projects pass.
-- [x] Implement full JSON favorites export and backend-aware confirmed removal; five browser storage scenarios pass.
-- [ ] Complete final build, lint, isolated browser flows, CI, release and production verification.
+- [x] Preserve durable browser records with per-key temporary writes; 12 unit tests pass.
+- [x] Add full JSON favorites export and confirmed removal that preserves the current pack.
+- [x] Remove the embedded provider credential and repair the anonymous connection check.
+- [x] Fix installed library API wrappers, enforce type checking and repair Bun CI installation.
+- [x] Pass local and hosted builds, focused lint and nine synthetic browser scenarios.
+- [x] Confirm all 34 public build files match the main CI artifact through both public entries.
+- [x] Pass all five storage browser scenarios on the canonical production domain.
+- [ ] Release the missing /test rewrite and verify live connection-page flows.
+- [ ] Synchronize the original checkout while preserving its existing ignore edit and data.
 
-Bun frozen-lockfile install passed with the existing bun.lockb unchanged. The
-initial npm ci attempt was the wrong manager, not a repository install defect.
-Type checking, Vite/PWA, all twelve storage regressions and focused lint pass.
-Five browser storage scenarios and four API scenarios pass with synthetic data.
-API tests confirm an actual twenty-second timeout and cancellation on leaving.
-A visual check caught toasts obscuring the storage warning. The warning now uses
-normal page layout; the final build and all nine browser scenarios pass, with
-no browser errors or live provider requests. Mobile and desktop images were reviewed.
-No commit or deployment has occurred.
+The public Vercel alias has an existing 301 to the custom domain. The live
+harness initially blocked that canonical host; its allowlist is repaired. It
+then exposed an actual /test 404: the React route lacked a deployment rewrite.
+The prepared fix preserves existing headers, adds only the exact route, makes
+the local server read the shipped rewrites and includes config changes in CI.
 
-All ten public files in the original checkout retain baseline hashes. The
-worktree preserves eight byte-for-byte; meta.json and sw.js differ only in Git
-checkout line endings. The original ignore-file edit is untouched. No real collections,
-provider requests or provider credentials were used in tests. Credential removal
-does not revoke the existing provider key; retirement remains pending.
+Original collection/catalog files and local edits remain intact. Tests use
+disposable records and intercepted providers. An additional fresh public-homepage
+diagnostic ran normal startup in an empty browser; it did not use user collections
+or provider credentials. No database records were accessed or changed.
 
-Browser storage is an existing non-Supabase dependency. This repair does not
-migrate records or establish monthly cloud savings.
-
-The connection check now makes one anonymous request and does not pretend to
-rewrite bundled CSV/JSON files. CI installs the frozen Bun dependencies, checks
-TypeScript, tests the built app and retains artifacts for three days. The audit
-reports 23 affected package names across the dependency graph; dependency cleanup
-remains queued, and this is not a clean-audit or cloud-cost claim.
+Open follow-ups: retirement of the previously published provider key; 23 affected
+package names in the unchanged dependency audit; the legacy GitHub Pages entry
+serves uncompiled Vite source and its module path returns 404. Browser data remains
+outside Supabase. This repair does not establish monthly cloud savings.

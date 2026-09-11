@@ -57,9 +57,17 @@ INIT = """(() => {
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
-        if urlsplit(self.path).path == '/test':
-            self.path = '/index.html'
-        super().do_GET()
+        # Honor the exact rewrites that ship, rather than inventing an SPA fallback.
+        config = json.loads((ROOT / 'vercel.json').read_text(encoding='utf-8'))
+        for rewrite in config.get('rewrites', []):
+            if urlsplit(self.path).path == rewrite['source']:
+                self.path = rewrite['destination']
+                break
+        try:
+            super().do_GET()
+        except ConnectionError:
+            # Closing a disposable context can cancel an unfinished static asset.
+            pass
 
     def log_message(self, *_args):
         pass
@@ -85,6 +93,12 @@ def backup(page):
 
 def run(base, output, only='all', smoke=False):
     origin = urlsplit(base).netloc
+    allowed_origins = {origin}
+    # The public Vercel alias has an existing 301 to the custom domain.
+    # Permit only these known aliases; provider traffic remains intercepted.
+    public_origins = {'pokemonpacks.vercel.app', 'pokemonpacks.hong-yi.me'}
+    if origin in public_origins:
+        allowed_origins.update(public_origins)
     output.mkdir(parents=True, exist_ok=True)
     results = []
     with sync_playwright() as p:
@@ -99,7 +113,7 @@ def run(base, output, only='all', smoke=False):
             external, errors = [], []
 
             def route_request(route):
-                if urlsplit(route.request.url).netloc == origin:
+                if urlsplit(route.request.url).netloc in allowed_origins:
                     route.continue_()
                 else:
                     external.append(urlsplit(route.request.url).netloc)
@@ -150,7 +164,7 @@ def run(base, output, only='all', smoke=False):
                 assert page.evaluate('window.__storageFixture.read().favorites') == FAVORITES[1:]
             assert not external, external
             assert not errors, errors
-            results.append({'case': label, 'status': 'passed', 'provider_requests': 0})
+            results.append({'case': label, 'status': 'passed', 'provider_requests': 0, 'resolved_url': page.url})
             print(json.dumps(results[-1]), flush=True)
             context.close()
 
@@ -163,7 +177,7 @@ def run(base, output, only='all', smoke=False):
             def api_route(route):
                 request = route.request
                 parts = urlsplit(request.url)
-                if parts.netloc == origin:
+                if parts.netloc in allowed_origins:
                     route.continue_()
                 elif parts.netloc == 'api.pokemontcg.io':
                     assert parts.path == '/v2/sets' and parts.query == 'pageSize=1'
@@ -204,7 +218,7 @@ def run(base, output, only='all', smoke=False):
             assert page.evaluate('window.__storageFixture.read().favorites') == FAVORITES
             assert page.evaluate('window.__storageFixture.read().pack') == PACK
             assert not errors and not unexpected, (errors, unexpected)
-            results.append({'case': f'api-{behavior}', 'status': 'passed', 'intercepted_requests': 1, 'elapsed_seconds': round(elapsed, 2)})
+            results.append({'case': f'api-{behavior}', 'status': 'passed', 'intercepted_requests': 1, 'elapsed_seconds': round(elapsed, 2), 'resolved_url': page.url})
             print(json.dumps(results[-1]), flush=True)
             for route in stalled:
                 route.abort()
