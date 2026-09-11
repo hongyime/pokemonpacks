@@ -1,30 +1,33 @@
 # Agent state
 
-Portfolio upkeep, 2026-09-11. PR #60 is merged: implementation 5baf654,
-application merge 88bce44. Incoming workflow-only update 3f8cc46 is preserved.
+Portfolio upkeep, 2026-09-11. Collection repair PR #60 and routing follow-up
+PR #61 are merged. The final application/configuration release is 4058345;
+its Vercel production deployment is READY and all 34 public files match the
+reviewed main CI artifact through both public entry URLs.
 
-- [x] Preserve durable browser records with per-key temporary writes; 12 unit tests pass.
-- [x] Add full JSON favorites export and confirmed removal that preserves the current pack.
-- [x] Remove the embedded provider credential and repair the anonymous connection check.
-- [x] Fix installed library API wrappers, enforce type checking and repair Bun CI installation.
-- [x] Pass local and hosted builds, focused lint and nine synthetic browser scenarios.
-- [x] Confirm all 34 public build files match the main CI artifact through both public entries.
-- [x] Pass all five storage browser scenarios on the canonical production domain.
-- [ ] Release the missing /test rewrite and verify live connection-page flows.
-- [ ] Synchronize the original checkout while preserving its existing ignore edit and data.
+- [x] Preserve saved browser records when writes fail; all 12 storage regressions pass.
+- [x] Export complete JSON favorites, including pending values and filtered cards.
+- [x] Confirm bulk removal through the active backend and preserve the current pack.
+- [x] Remove the embedded API credential; bound and cancel anonymous connection checks.
+- [x] Repair installed UI library wrappers and enforce TypeScript checking in builds.
+- [x] Restore /test deep links with an exact rewrite while retaining existing headers.
+- [x] Pass local and hosted builds, focused lint and nine CI browser scenarios.
+- [x] Verify nine live scenarios plus two focused custom-domain scenarios and 68 file comparisons.
+- [x] Synchronize the original checkout; preserve all ten public files and its ignore additions, with backup/stash retained.
 
-The public Vercel alias has an existing 301 to the custom domain. The live
-harness initially blocked that canonical host; its allowlist is repaired. It
-then exposed an actual /test 404: the React route lacked a deployment rewrite.
-The prepared fix preserves existing headers, adds only the exact route, makes
-the local server read the shipped rewrites and includes config changes in CI.
+The Vercel alias has an existing 301 to the custom domain. Browser verification
+allows only those known app hosts and intercepts provider requests with fixtures.
+The local server reads the actual rewrite configuration. The live timeout returns
+control in about 21 seconds; leaving aborts the check. Normal-flow warnings avoid
+toast overlap. An earlier empty-browser homepage diagnostic allowed normal public
+startup; it did not use saved user collections or provider credentials.
 
-Original collection/catalog files and local edits remain intact. Tests use
-disposable records and intercepted providers. An additional fresh public-homepage
-diagnostic ran normal startup in an empty browser; it did not use user collections
-or provider credentials. No database records were accessed or changed.
+Remaining portfolio follow-ups: retire the previously published provider key;
+address the unchanged audit graph (23 affected package names); repair or consolidate
+the legacy GitHub Pages entry, which serves raw Vite source with a missing module
+URL; review other catalog/cache/gameplay behavior and shared workflow costs.
+Browser storage remains outside Supabase. No database records, collection schedules
+or billing plans were changed, and monthly cloud savings are not established.
 
-Open follow-ups: retirement of the previously published provider key; 23 affected
-package names in the unchanged dependency audit; the legacy GitHub Pages entry
-serves uncompiled Vite source and its module path returns 404. Browser data remains
-outside Supabase. This repair does not establish monthly cloud savings.
+These notes and the decision journal do not change the verified application files.
+The full portfolio goal remains active.
