@@ -114,7 +114,7 @@ jobs:
         run: ${{ steps.detect.outputs.pm == 'npm' && 'npm run build' || format('{0} run build', steps.detect.outputs.pm) }}
 
       - name: Set up browser verification
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
