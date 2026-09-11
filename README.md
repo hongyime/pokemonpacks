@@ -338,3 +338,8 @@ removal, reload/recovery and anonymous connection success/rate-limit/timeout flo
 To run locally, install that Playwright version and Chromium, then run
 `python tests/browser.py` after building. The script owns and closes its temporary
 local server. No real provider requests or user collections are used by the checks.
+
+Vercel serves the connection page at `/test` through the explicit rewrite in
+`vercel.json`. The local browser server reads that same exact-route configuration.
+The public Vercel alias redirects to the existing custom domain; production tests
+allow only those two known application hosts while intercepting provider traffic.
