@@ -343,3 +343,21 @@ Vercel serves the connection page at `/test` through the explicit rewrite in
 `vercel.json`. The local browser server reads that same exact-route configuration.
 The public Vercel alias redirects to the existing custom domain; production tests
 allow only those two known application hosts while intercepting provider traffic.
+
+## Dependency maintenance
+
+The 2026-09-13 compatible update refreshes the Bun dependency graph within the
+existing declared major versions. Re-resolving nested packages removes stale
+build-tool copies that a direct-dependency update retained. CI still uses Bun
+1.3.11, the binary `bun.lockb`, frozen installation and Node 24.
+
+The current registry audit drops from 23 affected package names to one:
+`react-router` 6.30.6 has two moderate advisories. This is not a clean audit.
+Upstream lists 7.18.0 or later as patched; that separate major upgrade is pending
+review. The SSR hydration advisory explicitly excludes this app's declarative
+router mode; navigation currently uses a fixed local destination. See the
+[redirect advisory](https://github.com/remix-run/react-router/security/advisories/GHSA-wrjc-x8rr-h8h6)
+and [SSR advisory](https://github.com/remix-run/react-router/security/advisories/GHSA-337j-9hxr-rhxg).
+The existing frozen build, storage and disposable browser checks validate this
+update. Application source, bundled catalog contents and storage behavior are
+unchanged; dependency maintenance does not establish monthly hosting savings.
