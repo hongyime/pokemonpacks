@@ -10,3 +10,5 @@
 
 - 2026-09-16 baseline review: repo synced (main 62404d8). Uncommitted local edit to .gitignore adds .vercel and .env* — safe additions but left uncommitted this session pending owner review. bun audit re-run: still exactly two moderate advisories in react-router@6.30.6 (GHSA-wrjc-x8rr-h8h6 open redirect via backslash; GHSA-337j-9hxr-rhxg arbitrary constructor injection during SSR hydration). Upgrade to v7.18.3 REMAINS PENDING OWNER APPROVAL per 2026-09-13 entry — not applied. No unpushed commits. Open PRs: Dependabot #63 upload-artifact 4→7 and #56 labeler 6→7 (workflow-only). No code, no lockfile, no source changes this session.
 - 2026-09-16 react-router v7 upgrade: bumped react-router-dom ^6.30.6 → ^7.0.0 (resolved 7.18.4); no source changes needed; regenerated bun.lockb on C:\ to bypass X:\ atomic-rename EINVAL; bun audit = 0 vulnerabilities; 12/12 storage tests pass; PR maintenance/react-router-v7-20260916 opened.
+
+- 2026-09-27: Prepared reviewed portability/privacy changes on the current default branch with maintenance-only file selection and preserved original workspace state.

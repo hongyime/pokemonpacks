@@ -41,3 +41,7 @@ The full portfolio goal remains active.
 2026-09-16 baseline review: no work applied. bun audit unchanged (2 moderate react-router advisories). Owner decision on RR v6→v7 major upgrade still pending — DO NOT proceed until owner confirms. Local .gitignore diff (.vercel, .env*) present but uncommitted. Dependabot workflow PRs #63 and #56 remain open awaiting hosted checks. Vercel deploy hold in effect until 2026-09-16T07:14:05Z.
 
 2026-09-16 react-router v6→v7 migration: upgraded react-router-dom from 6.30.6 to 7.18.4. No API changes required — BrowserRouter, Routes, Route, useLocation, useNavigate are all backward-compatible in v7. Regenerated bun.lockb (binary format) via fresh install on C:\ due to X:\ EINVAL on atomic rename. bun audit now reports 0 vulnerabilities. All 12 storage regressions pass. TypeScript + Vite build passes (2109 modules). PR open on maintenance/react-router-v7-20260916.
+
+## Reviewed workspace maintenance - 2026-09-27
+
+Publish the reviewed portability and privacy maintenance from the current default branch, preserving concurrent upstream work and original workspace changes. Validation is limited to the documented offline fixtures and hosted checks; no live data job or deployment command was executed locally.
